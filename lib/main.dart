@@ -19,7 +19,7 @@ class CameraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: GetAppWidget());
+    return const GetMaterialApp(home: GetAppWidget());
   }
 }
 
@@ -90,7 +90,7 @@ class GetAppWidget extends StatelessWidget {
   Widget _previewContainer({required Widget child}) {
     return InteractiveViewer(
       maxScale: 10.0,
-      child: AspectRatio(aspectRatio: 3 / 4, child: child),
+      child: AspectRatio(aspectRatio: (210 - 40) /( 297 - 40), child: child),
     );
   }
 
@@ -98,7 +98,15 @@ class GetAppWidget extends StatelessWidget {
     return ListView(
       scrollDirection: Axis.horizontal,
       children: [
-        FilledButton(onPressed: NUEDCController.doOneShot, child: Text("单次")),
+        FilledButton(
+          onPressed: NUEDCController.doOneShotCalib,
+          child: Text("棋盘格标定"),
+        ),
+        FilledButton(
+          onPressed: NUEDCController.doCalibCalculate,
+          child: Text("计算标定"),
+        ),
+        FilledButton(onPressed: NUEDCController.doOneShot, child: Text("单次测量")),
         FilledButton(
           onPressed: () {
             CameraManager.to.stop();

@@ -105,10 +105,10 @@ class CameraManager extends GetxController {
 
   final _cameras = Rx<List<CameraDescription>>([]);
   List<CameraDescription> get cameras => _cameras.value;
-  final _selectedCamera = 0.obs;
+  final _selectedCamera = (-1).obs;
   int get selectedCamera => _selectedCamera.value;
   set selectedCamera(int val) {
-    if (val >= _cameras.value.length) return;
+    if (val >= _cameras.value.length || val < 0) return;
     _selectedCamera.value = val;
     onNewCameraSelected(_cameras.value[val]);
   }

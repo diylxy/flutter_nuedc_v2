@@ -1,9 +1,15 @@
 import 'package:opencv_core/opencv.dart' as cv;
 
+class CameraCalibrateResult {
+  final cv.Mat mtx;
+  final cv.Mat dist;
+  CameraCalibrateResult({required this.mtx, required this.dist});
+}
+
 class ChessboardCorrector {
   final (int, int) chessboardSize;
   final double chessboardWidth;
-  final imageShape = [123, 234];
+  final imageShape = [0, 0];
 
   late final List<cv.Point3f> chessboardPointsPattern;
   final List<List<cv.Point3f>> objPoints = [];
@@ -14,10 +20,10 @@ class ChessboardCorrector {
     this.chessboardSize = (6, 8),
     this.chessboardWidth = 21.2,
   }) {
-    final int rows = chessboardSize.$1;
-    final int cols = chessboardSize.$2;
+    final int cols = chessboardSize.$1;
+    final int rows = chessboardSize.$2;
     chessboardPointsPattern = List.generate(
-      cols * rows,
+      rows * cols,
       (i) => cv.Point3f(
         i % cols * chessboardWidth,
         i ~/ cols * chessboardWidth,
@@ -63,8 +69,8 @@ class ChessboardCorrector {
     return cornersResult.$1;
   }
 
-  Future<Map<String, List>> calculateInnerParams() async {
-    if (imageCount == 0) return {};
+  Future<CameraCalibrateResult?> calculateInnerParams() async {
+    if (imageCount == 0) return null;
     final result = await cv.calibrateCameraAsync(
       cv.VecVecPoint3f.fromList(objPoints),
       cv.VecVecPoint2f.fromList(imgPoints),
@@ -78,6 +84,6 @@ class ChessboardCorrector {
     I/flutter (13174): [[23986.993097847037, 0.0, 1196.1959426228962], [0.0, 34772.885849378195, 2237.3877000093426], [0.0, 0.0, 1.0]]
     I/flutter (13174): [[268.48509756963483, -113938.15849769469, 1.4271931656953916, 0.2591205954191337, -33362.20367735409]]
     */
-    return ({'mtx': result.$2.toList(), 'dist': result.$3.toList()});
+    return CameraCalibrateResult(mtx: result.$2, dist: result.$3);
   }
 }

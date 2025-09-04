@@ -5,7 +5,10 @@ import 'package:onnxruntime/onnxruntime.dart';
 
 class DigitRecognizerCnn {
   late OrtSession _session;
+  bool isInited = false;
   Future<void> init() async {
+    if (isInited) return;
+    isInited = true;
     OrtEnv.instance.init();
     final sessionOptions = OrtSessionOptions();
     const assetFileName =
@@ -15,7 +18,7 @@ class DigitRecognizerCnn {
     _session = OrtSession.fromBuffer(bytes, sessionOptions);
   }
 
-  // mat为灰度或二值图，24*24像素
+  // mat为灰度图，24*24像素
   Future<int> inference(cv.Mat mat) async {
     final flatList = mat
         .toList()
