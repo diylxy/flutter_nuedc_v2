@@ -174,7 +174,7 @@ class PaperFinder {
     bool weak = false,
     cv.Mat? frame,
   }) async {
-    final bw = await cv.thresholdAsync(gray, 127, 255, cv.THRESH_BINARY);
+    final bw = await cv.thresholdAsync(gray, 60, 255, cv.THRESH_BINARY);
     final innerCorners = await getEdgeCorners(
       gray,
       bw.$2,

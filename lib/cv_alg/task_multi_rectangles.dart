@@ -31,6 +31,7 @@ class TaskMultiRectangles {
     return cv.Point2f(v.x / norm, v.y / norm);
   }
 
+  /// 计算两向量夹角（原点为起点）
   double angleBetween(cv.Point2f v1, cv.Point2f v2) {
     v1 = normalizeVector(v1);
     v2 = normalizeVector(v2);
@@ -38,6 +39,8 @@ class TaskMultiRectangles {
     return radiansToDegrees(math.acos(dot));
   }
 
+  /// 判断4条边线能否形成正方形。
+  /// [angles]为构成正方形的四条线段本身的角度
   bool canFormRectangle(List<double> angles) {
     final n = angles.length;
     final anglePairs = <double>[];
@@ -83,11 +86,13 @@ class TaskMultiRectangles {
     return signedArea / 2.0;
   }
 
+  /// 检查是否所有外角点都在矩形外部（最多向内偏移10像素）。
   bool checkOuterAngle(
     cv.VecPoint2f rectangle,
     cv.VecPoint2f points,
-    List<double> angles,
-  ) {
+    List<double> angles, {
+    List<cv.Point2f> innerPointsFit = const [],
+  }) {
     for (int i = 0; i < points.length; ++i) {
       if (angles[i] == 0) {
         if (cv.pointPolygonTest(
@@ -98,9 +103,22 @@ class TaskMultiRectangles {
               points[i],
               true,
             ) >=
-            20) {
+            10) {
           return false;
         }
+      }
+    }
+    for (final point in innerPointsFit) {
+      if (cv.pointPolygonTest(
+            rectangle
+                .map((e) => cv.Point(e.x.toInt(), e.y.toInt()))
+                .toList()
+                .asVec(),
+            point,
+            true,
+          ) >=
+          10) {
+        return false;
       }
     }
     return true;
@@ -156,13 +174,16 @@ class TaskMultiRectangles {
       final approx = await cv.approxPolyDPAsync(cnt, epsilon, true);
       double area = contourArea(approx);
       // 小于0表示白色在黑色内，逆时针
-      if (area < -2000 && area > -maxArea) {
-        if (approx.length < 10) {
+      if (area < -5000 && area > -maxArea) {
+        if (approx.length <= 10) {
+          approxWhiteRects.add(approx);
+        }
+      } else if (area < -1000 && area > -maxArea) {
+        if (approx.length <= 3) {
           approxWhiteRects.add(approx);
         }
       }
       if (area < minArea || area > maxArea) {
-        if (area > maxArea) {}
         continue;
       }
       approxRects.add(approx);
@@ -363,6 +384,7 @@ class TaskMultiRectangles {
       }
       // 查找孔洞边
       final foundHole = <cv.VecPoint>[];
+      final innerPointsFit = <cv.Point2f>[]; //  内部拟合点，用于后续判断正方形
       for (final whiteContour in approxWhiteRects) {
         // 判断白色轮廓的所有点是否都在rectPending内部
         bool allInside = true;
@@ -402,6 +424,7 @@ class TaskMultiRectangles {
               orphanEdges.add([p1, p2]);
             }
           }
+          innerPointsFit.addAll(whitePoints);
           foundHole.add(whiteContour);
         }
       }
@@ -463,15 +486,136 @@ class TaskMultiRectangles {
             if (intersections.length == 4) {
               final square = EasyTrans.orderPoints(intersections);
               if (isSquare(square)) {
-                if (checkOuterAngle(square, points, anglesInfo)) {
+                if (checkOuterAngle(
+                  square,
+                  points,
+                  anglesInfo,
+                  innerPointsFit: innerPointsFit,
+                )) {
                   newRects.add(square);
+                  usedEdges.addAll(groupIndices);
                 }
-                usedEdges.addAll(groupIndices);
               }
             }
           }
         }
       }
+      // 如果还有未匹配的孤立顶点，尝试拟合到剩余全部边线上
+      final orphanEdgesRemaining = orphanEdges
+          .asMap()
+          .entries
+          .where((entry) => !usedEdges.contains(entry.key))
+          .map((entry) => entry.value)
+          .toList();
+
+      for (int vmapId = 0; vmapId < orpanVertexesMap.length; vmapId++) {
+        if (orpanVertexesMap[vmapId] == 1) {
+          final rectangleOrphanVertex = <MapEntry<cv.VecPoint2f, double>>[];
+          final p0 = points[vmapId];
+          final p1 = points[(vmapId - 1 + n) % n];
+          final p2 = points[(vmapId + 1) % n];
+
+          for (final edge in orphanEdgesRemaining) {
+            if (edge[0] == p0 || edge[1] == p0) continue;
+
+            final angleRemote = angleBetween(
+              cv.Point2f(p1.x - p0.x, p1.y - p0.y),
+              cv.Point2f(edge[1].x - edge[0].x, edge[1].y - edge[0].y),
+            ).abs();
+
+            final adjustedAngle = angleRemote > 90
+                ? 180 - angleRemote
+                : angleRemote;
+
+            cv.Point2f? intersectRemote;
+            cv.Point2f? targetPoint;
+
+            if (adjustedAngle < 5) {
+              // v1平行，v2垂直，延长v2可与edge交于一点，这一点可与p0组成正方形，另一边向v1方向延伸
+              intersectRemote = LineUtils.lineIntersection(
+                p0,
+                p2,
+                edge[0],
+                edge[1],
+              );
+              targetPoint = p1;
+            } else if (adjustedAngle > 85) {
+              // v2平行，v1垂直，延长v1可与edge交于一点，这一点可与p0组成正方形，另一边向v1方向延伸
+              intersectRemote = LineUtils.lineIntersection(
+                p0,
+                p1,
+                edge[0],
+                edge[1],
+              );
+              targetPoint = p2;
+            } else {
+              continue;
+            }
+
+            if (intersectRemote == null ||
+                intersectRemote.x < 0 ||
+                intersectRemote.x >= gray.shape[1] ||
+                intersectRemote.y < 0 ||
+                intersectRemote.y >= gray.shape[0]) {
+              continue;
+            }
+
+            final farthestPoint =
+                math.sqrt(
+                      math.pow(intersectRemote.x - edge[0].x, 2) +
+                          math.pow(intersectRemote.y - edge[0].y, 2),
+                    ) >
+                    math.sqrt(
+                      math.pow(intersectRemote.x - edge[1].x, 2) +
+                          math.pow(intersectRemote.y - edge[1].y, 2),
+                    )
+                ? edge[0]
+                : edge[1];
+
+            final direction1 = cv.Point2f(
+              farthestPoint.x - intersectRemote.x,
+              farthestPoint.y - intersectRemote.y,
+            );
+            final direction2 = cv.Point2f(
+              targetPoint.x - p0.x,
+              targetPoint.y - p0.y,
+            );
+
+            if (direction1.x * direction2.x + direction1.y * direction2.y <=
+                0) {
+              continue;
+            }
+
+            final square = constructSquareBy2VertexesAndDir(
+              p0,
+              intersectRemote,
+              targetPoint,
+            );
+
+            if (square == null) continue;
+
+            if (isSquare(square) &&
+                checkOuterAngle(
+                  square,
+                  points,
+                  anglesInfo,
+                  innerPointsFit: innerPointsFit,
+                )) {
+              final distanceToIntersect = math.sqrt(
+                math.pow(p0.x - intersectRemote.x, 2) +
+                    math.pow(p0.y - intersectRemote.y, 2),
+              );
+              rectangleOrphanVertex.add(MapEntry(square, distanceToIntersect));
+            }
+          }
+
+          if (rectangleOrphanVertex.isNotEmpty) {
+            rectangleOrphanVertex.sort((a, b) => b.value.compareTo(a.value));
+            newRects.add(rectangleOrphanVertex.first.key);
+          }
+        }
+      }
+
       // 所有正方形查找完成，开始修正
       // 修正newRects中的点为points中更精确的点
       for (int rectIdx = 0; rectIdx < newRects.length; rectIdx++) {
