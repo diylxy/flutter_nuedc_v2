@@ -19,13 +19,12 @@ class CameraManager extends GetxController {
     fetchCameras();
     recognizer.init();
   }
-  
+
   @override
   void onClose() {
     super.onClose();
     recognizer.dispose();
   }
-
 
   final Rx<ui.Image?> _opencvPreviewImage = Rx<ui.Image?>(null);
   ui.Image? get opencvPreviewImage => _opencvPreviewImage.value;
@@ -68,6 +67,7 @@ class CameraManager extends GetxController {
       }
     }
     _controller.value = cameraController;
+    _startImageStream();
   }
 
   void _showCameraException(CameraException e) {
@@ -81,6 +81,7 @@ class CameraManager extends GetxController {
     if (cameraController == null || !cameraController!.value.isInitialized) {
       return;
     }
+    _stopImageStream();
     await cameraController!.pausePreview();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await cameraController!.dispose();
@@ -89,11 +90,45 @@ class CameraManager extends GetxController {
     _selectedCamera.value = -1;
   }
 
+  bool _canStream = false;
+
+  Future<void> _stopImageStream() async {
+    if (cameraController!.value.isStreamingImages) {
+      await cameraController!.stopImageStream();
+      _canStream = false;
+    }
+  }
+
+  Future<void> _startImageStream() async {
+    _canStream = true;
+    if (_imageStreamCB != null) {
+      await cameraController!.startImageStream(_imageStreamCB!);
+    }
+  }
+
+  Function(CameraImage image)? _imageStreamCB;
+
+  Future<void> setImageStreamCB(void Function(CameraImage image)? cb) async {
+    _imageStreamCB = cb;
+    if (_canStream) {
+      if (cameraController != null) {
+        if (cameraController!.value.isStreamingImages) {
+          await cameraController!.stopImageStream();
+        }
+        if (cb != null) {
+          await cameraController!.startImageStream(cb);
+        }
+      }
+    }
+  }
+
   Future<void> onNewCameraSelected(CameraDescription cameraDescription) async {
     if (cameraController != null) {
+      _stopImageStream();
       await cameraController!.pausePreview();
       await cameraController!.setDescription(cameraDescription);
       await cameraController!.resumePreview();
+      _startImageStream();
     } else {
       return initializeCameraController(cameraDescription);
     }
