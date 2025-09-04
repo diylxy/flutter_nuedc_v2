@@ -28,7 +28,6 @@ class CoordinateDesc {
   }
 
   double getYAngleDegree() {
-    
     double thetaY = math.atan2(R.at<double>(0, 2), R.at<double>(2, 2));
     return thetaY * (180 / math.pi); // Convert radians to degrees
   }
@@ -58,14 +57,23 @@ class CoordinateDesc {
   factory CoordinateDesc.fromMap(Map<String, dynamic> map) {
     return CoordinateDesc(
       rvec: cv.Mat.from2DList(
-        map['rvec'] as List<List<double>>,
-        cv.MatType.CV_32FC1,
+        (map['rvec'] as List<dynamic>)
+            .map((e) => (e as List<dynamic>).map((v) => v as double).toList())
+            .toList(),
+        cv.MatType.CV_64FC1,
       ),
       tvec: cv.Mat.from2DList(
-        map['tvec'] as List<List<double>>,
-        cv.MatType.CV_32FC1,
+        (map['tvec'] as List<dynamic>)
+            .map((e) => (e as List<dynamic>).map((v) => v as double).toList())
+            .toList(),
+        cv.MatType.CV_64FC1,
       ),
-      R: cv.Mat.from2DList(map['R'] as List<List<double>>, cv.MatType.CV_32FC1),
+      R: cv.Mat.from2DList(
+        (map['R'] as List<dynamic>)
+            .map((e) => (e as List<dynamic>).map((v) => v as double).toList())
+            .toList(),
+        cv.MatType.CV_64FC1,
+      ),
     );
   }
 

@@ -37,7 +37,7 @@ class CameraManager extends GetxController {
   ) async {
     final CameraController cameraController = CameraController(
       cameraDescription,
-      ResolutionPreset.max,
+      _lowQuality ? ResolutionPreset.medium : ResolutionPreset.max,
       enableAudio: false,
       imageFormatGroup: Platform.isAndroid
           ? ImageFormatGroup.yuv420
@@ -67,7 +67,7 @@ class CameraManager extends GetxController {
       }
     }
     _controller.value = cameraController;
-    _startImageStream();
+    await _startImageStream();
   }
 
   void _showCameraException(CameraException e) {
@@ -124,11 +124,11 @@ class CameraManager extends GetxController {
 
   Future<void> onNewCameraSelected(CameraDescription cameraDescription) async {
     if (cameraController != null) {
-      _stopImageStream();
+      await _stopImageStream();
       await cameraController!.pausePreview();
       await cameraController!.setDescription(cameraDescription);
       await cameraController!.resumePreview();
-      _startImageStream();
+      await _startImageStream();
     } else {
       return initializeCameraController(cameraDescription);
     }
@@ -147,6 +147,15 @@ class CameraManager extends GetxController {
     if (val >= _cameras.value.length || val < 0) return;
     _selectedCamera.value = val;
     onNewCameraSelected(_cameras.value[val]);
+  }
+
+  bool _lowQuality = false;
+  Future<void> reinitialize({bool lowQuality = false}) async {
+    int currentCameraId = _selectedCamera.value;
+    _lowQuality = lowQuality;
+    await stop();
+    await Future.delayed(Duration(milliseconds: 200));
+    selectedCamera = currentCameraId;
   }
 
   Future<void> fetchCameras() async {

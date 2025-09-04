@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter_nuedc_v2/controller/camera_manager.dart';
 import 'package:flutter_nuedc_v2/controller/threed_controller.dart';
 import 'package:flutter_nuedc_v2/controller/main_page_controller.dart';
@@ -308,7 +309,15 @@ class Python {
   static Future<void> enterExitLowpower(bool enter) async {}
 
   // 不支持
-  static Future<void> realtimeMeasuremode(bool enable) async {}
+  static Future<void> realtimeMeasuremode(bool enable) async {
+    if (enable) {
+      await CameraManager.to.reinitialize(lowQuality: true);
+      await CameraManager.to.setImageStreamCB(_streamCB3D);
+    } else {
+      await CameraManager.to.reinitialize(lowQuality: false);
+      await CameraManager.to.setImageStreamCB(null);
+    }
+  }
 
   // 不支持
   static Future<void> cannyMode(bool enable) async {}
@@ -331,9 +340,22 @@ class Python {
     targetNumber = id;
   }
 
-  static Future<void> enter3D() async {}
+  static void _streamCB3D(CameraImage image) async {
+    final frame = await image.toCV(
+      controller: CameraManager.to.cameraController,
+    );
+    CameraManager.to.opencvPreviewImage = await frame.toUiImage();
+  }
 
-  static Future<void> leave3D() async {}
+  static Future<void> enter3D() async {
+    await CameraManager.to.reinitialize(lowQuality: true);
+    await CameraManager.to.setImageStreamCB(_streamCB3D);
+  }
+
+  static Future<void> leave3D() async {
+    await CameraManager.to.reinitialize(lowQuality: false);
+    await CameraManager.to.setImageStreamCB(null);
+  }
 
   static Future<void> oneshotMeasurement() async {
     final (frame, result) = await _clipPaper();
