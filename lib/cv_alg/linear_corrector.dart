@@ -4,6 +4,13 @@ class LinearCorrector {
   double? a;
   double? b;
 
+  void clear() {
+    a = null;
+    b = null;
+    measuredDistances.clear();
+    actualDistances.clear();
+  }
+
   void addCalibrate(double measure, double actual) {
     measuredDistances.add(measure);
     actualDistances.add(actual);
@@ -46,8 +53,8 @@ class LinearCorrector {
     return {'a': a, 'b': b};
   }
 
-  void loadResult(Map<String, double> dataMap) {
-    a = dataMap['a'];
-    b = dataMap['b'];
+  void loadResult(Map<String, dynamic> dataMap) {
+    a = dataMap['a'] as double?;
+    b = dataMap['b'] as double?;
   }
 }

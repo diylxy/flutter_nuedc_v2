@@ -86,6 +86,7 @@ class CameraManager extends GetxController {
       await cameraController!.dispose();
       _controller.value = null;
     });
+    _selectedCamera.value = -1;
   }
 
   Future<void> onNewCameraSelected(CameraDescription cameraDescription) async {

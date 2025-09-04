@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:opencv_core/opencv.dart' as cv;
 
@@ -23,10 +24,21 @@ class CoordinateDesc {
   }
 
   double getDistanceZ() {
-    return tvec.toList()[0][2].toDouble();
+    return tvec.toList()[2][0].toDouble();
   }
-  
-  // boilerplate
+
+  double getYAngleDegree() {
+    
+    double thetaY = math.atan2(R.at<double>(0, 2), R.at<double>(2, 2));
+    return thetaY * (180 / math.pi); // Convert radians to degrees
+  }
+
+  double getXAngleDegree() {
+    double thetaX = math.atan2(-R.at<double>(1, 2), R.at<double>(2, 2));
+    return thetaX * (180 / math.pi); // Convert radians to degrees
+  }
+
+  // boilerplates
   CoordinateDesc copyWith({cv.Mat? rvec, cv.Mat? tvec, cv.Mat? R}) {
     return CoordinateDesc(
       rvec: rvec ?? this.rvec,

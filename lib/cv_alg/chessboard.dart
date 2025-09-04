@@ -1,9 +1,53 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:convert';
+
 import 'package:opencv_core/opencv.dart' as cv;
 
 class CameraCalibrateResult {
   final cv.Mat mtx;
   final cv.Mat dist;
   CameraCalibrateResult({required this.mtx, required this.dist});
+
+  CameraCalibrateResult copyWith({cv.Mat? mtx, cv.Mat? dist}) {
+    return CameraCalibrateResult(mtx: mtx ?? this.mtx, dist: dist ?? this.dist);
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{'mtx': mtx.toList(), 'dist': dist.toList()};
+  }
+
+  factory CameraCalibrateResult.fromMap(Map<String, dynamic> map) {
+    return CameraCalibrateResult(
+      mtx: cv.Mat.from2DList(
+        (map['mtx'] as List<dynamic>).map((e) => (e as List<dynamic>).map((v) => v as double).toList()).toList(),
+        cv.MatType.CV_32FC1,
+      ),
+      dist: cv.Mat.from2DList(
+        (map['dist'] as List<dynamic>).map((e) => (e as List<dynamic>).map((v) => v as double).toList()).toList(),
+        cv.MatType.CV_32FC1,
+      ),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory CameraCalibrateResult.fromJson(String source) =>
+      CameraCalibrateResult.fromMap(
+        json.decode(source) as Map<String, dynamic>,
+      );
+
+  @override
+  String toString() => 'CameraCalibrateResult(mtx: $mtx, dist: $dist)';
+
+  @override
+  bool operator ==(covariant CameraCalibrateResult other) {
+    if (identical(this, other)) return true;
+
+    return other.mtx == mtx && other.dist == dist;
+  }
+
+  @override
+  int get hashCode => mtx.hashCode ^ dist.hashCode;
 }
 
 class ChessboardCorrector {

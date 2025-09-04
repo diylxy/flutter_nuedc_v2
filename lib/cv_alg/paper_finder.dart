@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter_nuedc_v2/cv_alg/chessboard.dart';
 import 'package:flutter_nuedc_v2/cv_alg/constants.dart';
 import 'package:flutter_nuedc_v2/cv_alg/coord_utils.dart';
 import 'package:flutter_nuedc_v2/cv_alg/easy_trans.dart';
@@ -20,7 +21,7 @@ class PaperFinder {
   int paperWidth = 170;
   int paperHeight = 257;
 
-  Future<cv.VecPoint2f> getEdgeCorners(
+  Future<cv.VecPoint2f> _getEdgeCorners(
     cv.Mat gray,
     cv.Mat edged, {
     bool weak = false,
@@ -121,7 +122,7 @@ class PaperFinder {
     return maxAreaRect;
   }
 
-  Future<(CoordinateDesc, List<cv.Mat>)> getDists(
+  Future<(CoordinateDesc, List<cv.Mat>)> _getDists(
     cv.VecPoint2f innerCorners,
     cv.Mat mtx,
     cv.Mat dist,
@@ -169,20 +170,29 @@ class PaperFinder {
 
   Future<ClipPaperResult?> clipPaper(
     cv.Mat gray,
-    cv.Mat mtx,
-    cv.Mat dist, {
+    CameraCalibrateResult calibrateData, {
+    int bwThresh = 60,
     bool weak = false,
     cv.Mat? frame,
   }) async {
-    final bw = await cv.thresholdAsync(gray, 60, 255, cv.THRESH_BINARY);
-    final innerCorners = await getEdgeCorners(
+    final bw = await cv.thresholdAsync(
+      gray,
+      bwThresh.toDouble(),
+      255,
+      cv.THRESH_BINARY,
+    );
+    final innerCorners = await _getEdgeCorners(
       gray,
       bw.$2,
       weak: weak,
       frame: frame,
     );
     if (innerCorners.isNotEmpty) {
-      final result = await getDists(innerCorners, mtx, dist);
+      final result = await _getDists(
+        innerCorners,
+        calibrateData.mtx,
+        calibrateData.dist,
+      );
 
       // 透视变换出A4纸内部区域
       final clipped = await EasyTrans.perspectiveRectangle(
