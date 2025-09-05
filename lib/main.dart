@@ -16,6 +16,7 @@ Future<void> main() async {
   Get.lazyPut(() => MainPageController());
   Get.lazyPut(() => ThreedController());
   Python.onInit();
+  Python.doClearCache();
   runApp(const MainApp());
 }
 

@@ -5,6 +5,7 @@ import 'package:flutter_nuedc_v2/cv_alg/coord_utils.dart';
 import 'package:flutter_nuedc_v2/cv_alg/linear_corrector.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_nuedc_v2/controller/main_page_controller.dart';
 
 class UserPreferenceService {
   static UserPreferenceService get to => Get.find<UserPreferenceService>();
@@ -14,10 +15,13 @@ class UserPreferenceService {
   CameraCalibrateResult? calibData; // 相机标定数据
   CoordinateDesc? coordBase; // 世界原点坐标信息
   double worldOriginOffset = 1250.0; // 世界原点Z坐标，单位毫米
-  int bwThresholdPaper = 60; // 纸边框检测阈值
+  int cannyLow = 200; // 纸边框检测-Canny模式低阈值
+  int cannyHigh = 500; // 纸边框检测-Canny模式高阈值
+  int bwThresholdPaper = 60; // 纸边框检测黑白模式阈值
   int bwThresholdRect = 127; // 矩形检测阈值
   LinearCorrector linearErrorCalibrator = LinearCorrector(); // 线性标定结果
   LinearCorrector circularErrorCalibrator = LinearCorrector(); // 旋转标定结果
+  double chessboardWidth = 21.2;
 
   // 从字符串导入用户设置
   bool loadsSettings(String buffer) {
@@ -31,6 +35,12 @@ class UserPreferenceService {
       }
       if (settingsMap['worldOriginOffset'] != null) {
         worldOriginOffset = settingsMap['worldOriginOffset'];
+      }
+      if (settingsMap['cannyLow'] != null) {
+        cannyLow = settingsMap['cannyLow'];
+      }
+      if (settingsMap['cannyHigh'] != null) {
+        cannyHigh = settingsMap['cannyHigh'];
       }
       if (settingsMap['bwThresholdPaper'] != null) {
         bwThresholdPaper = settingsMap['bwThresholdPaper'];
@@ -48,6 +58,9 @@ class UserPreferenceService {
           settingsMap['circularErrorCalibrator'] as Map<String, dynamic>,
         );
       }
+      if (settingsMap['chessboardWidth'] != null) {
+        chessboardWidth = settingsMap['chessboardWidth'];
+      }
       return true;
     } on FormatException {
       return false;
@@ -61,11 +74,14 @@ class UserPreferenceService {
     settingsMap['calibData'] = calibData?.toMap();
     settingsMap['coordBase'] = coordBase?.toMap();
     settingsMap['worldOriginOffset'] = worldOriginOffset;
+    settingsMap['cannyLow'] = cannyLow;
+    settingsMap['cannyHigh'] = cannyHigh;
     settingsMap['bwThresholdPaper'] = bwThresholdPaper;
     settingsMap['bwThresholdRect'] = bwThresholdRect;
     settingsMap['linearErrorCalibrator'] = linearErrorCalibrator.dumpResult();
     settingsMap['circularErrorCalibrator'] = circularErrorCalibrator
         .dumpResult();
+    settingsMap['chessboardWidth'] = chessboardWidth;
     return jsonEncode(settingsMap);
   }
 
@@ -74,6 +90,11 @@ class UserPreferenceService {
     final calibData = prefs.getString('calib');
     if (calibData != null) {
       loadsSettings(calibData);
+      MainPageController.to.cannyHigh = cannyHigh.toDouble();
+      MainPageController.to.cannyLow = cannyLow.toDouble();
+      MainPageController.to.bwThresholdPaper = bwThresholdPaper.toDouble();
+      MainPageController.to.bwThresholdRect = bwThresholdRect.toDouble();
+      MainPageController.to.chessboardWidth = chessboardWidth;
     }
   }
 

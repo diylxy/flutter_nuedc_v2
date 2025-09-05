@@ -18,8 +18,6 @@ class ClipPaperResult {
 }
 
 class PaperFinder {
-  int paperWidth = 170;
-  int paperHeight = 257;
 
   Future<cv.VecPoint2f> _getEdgeCorners(
     cv.Mat gray,
@@ -44,10 +42,12 @@ class PaperFinder {
           if (area < 10000) {
             continue;
           }
+        } else {
+          if (area < 200 * 200) {
+            continue;
+          }
         }
-        if (area < 200 * 200) {
-          continue;
-        }
+        if (area > gray.rows * gray.cols * 0.8) continue;
         rects.add(approx);
       }
     }
@@ -75,13 +75,18 @@ class PaperFinder {
           ox = x;
           oy = y;
         } else {
-          ox = (x + dx / length * 20).round();
-          oy = (y + dy / length * 15).round();
+          if (weak) {
+            ox = (x + dx / length * 8).round();
+            oy = (y + dy / length * 8).round();
+          } else {
+            ox = (x + dx / length * 20).round();
+            oy = (y + dy / length * 15).round();
+          }
         }
         if (oy >= 0 && oy < gray.rows && ox >= 0 && ox < gray.cols) {
           // Access pixel value in gray
           int pixel = gray.at<int>(oy, ox);
-          if (pixel <= 80) {
+          if (pixel <= 128) {
             allPointsValid = false;
             break;
           }
@@ -97,11 +102,13 @@ class PaperFinder {
               .map((pt) => cv.Point2f(pt.x.toDouble(), pt.y.toDouble()))
               .toList(),
         );
-        cv.cornerSubPix(gray, corners, const (11, 11), const (-1, -1), (
-          cv.TERM_MAX_ITER + cv.TERM_EPS,
-          30,
-          0.001,
-        ));
+        // if (weak == false) {
+          cv.cornerSubPix(gray, corners, const (5, 5), const (-1, -1), (
+            cv.TERM_MAX_ITER + cv.TERM_EPS,
+            30,
+            0.001,
+          ));
+        // }
         final area = cv.contourArea(inner);
         if (area > maxArea) {
           maxAreaRect = corners;
@@ -171,19 +178,26 @@ class PaperFinder {
   Future<ClipPaperResult?> clipPaper(
     cv.Mat gray,
     CameraCalibrateResult calibrateData, {
-    int bwThresh = 60,
+    int cannyLow = 200,
+    int cannyHigh = 500,
+    int bwThresh = 127,
     bool weak = false,
     cv.Mat? frame,
   }) async {
-    final bw = await cv.thresholdAsync(
-      gray,
-      bwThresh.toDouble(),
-      255,
-      cv.THRESH_BINARY,
-    );
+    cv.Mat bw = cv.Mat.empty();
+    if (weak) {
+      bw = await cv.cannyAsync(gray, 200, 500);
+    } else {
+      (_, bw) = await cv.thresholdAsync(
+        gray,
+        bwThresh.toDouble(),
+        255,
+        cv.THRESH_BINARY,
+      );
+    }
     final innerCorners = await _getEdgeCorners(
       gray,
-      bw.$2,
+      bw,
       weak: weak,
       frame: frame,
     );

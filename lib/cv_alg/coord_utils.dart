@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter_nuedc_v2/cv_alg/constants.dart';
 import 'package:opencv_core/opencv.dart' as cv;
 
 class CoordinateDesc {
@@ -24,7 +25,20 @@ class CoordinateDesc {
   }
 
   double getDistanceZ() {
-    return tvec.toList()[2][0].toDouble();
+    // Define the real-world rectangle point (in mm) to calculate the Z-distance for
+    List<double> targetPt = [paperWidth.toDouble() / 2.0, paperHeight.toDouble(), 0];
+
+    // Transform the target point to the camera coordinate system
+    cv.Mat targetPtMat = cv.Mat.fromList(
+      3,
+      1,
+      cv.MatType.CV_64FC1,
+      targetPt,
+    );
+    cv.Mat targetCamMat = R.multiplyMat(targetPtMat).add(tvec);
+
+    // Return the Z-distance of the target point
+    return targetCamMat.toList()[2][0].toDouble();
   }
 
   double getYAngleDegree() {

@@ -1,31 +1,60 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
 
+import 'package:flutter_nuedc_v2/cv_alg/constants.dart';
 import 'package:opencv_core/opencv.dart' as cv;
 
 class CameraCalibrateResult {
   final cv.Mat mtx;
   final cv.Mat dist;
-  CameraCalibrateResult({required this.mtx, required this.dist});
+  final int width;
+  final int height;
+  CameraCalibrateResult({
+    required this.mtx,
+    required this.dist,
+    required this.width,
+    required this.height,
+  });
 
-  CameraCalibrateResult copyWith({cv.Mat? mtx, cv.Mat? dist}) {
-    return CameraCalibrateResult(mtx: mtx ?? this.mtx, dist: dist ?? this.dist);
+  CameraCalibrateResult copyWith({
+    cv.Mat? mtx,
+    cv.Mat? dist,
+    int? width,
+    int? height,
+  }) {
+    return CameraCalibrateResult(
+      mtx: mtx ?? this.mtx,
+      dist: dist ?? this.dist,
+      width: width ?? this.width,
+      height: height ?? this.height,
+    );
   }
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{'mtx': mtx.toList(), 'dist': dist.toList()};
+    return <String, dynamic>{
+      'mtx': mtx.toList(),
+      'dist': dist.toList(),
+      'width': width,
+      'height': height,
+    };
   }
 
   factory CameraCalibrateResult.fromMap(Map<String, dynamic> map) {
     return CameraCalibrateResult(
       mtx: cv.Mat.from2DList(
-        (map['mtx'] as List<dynamic>).map((e) => (e as List<dynamic>).map((v) => v as double).toList()).toList(),
+        (map['mtx'] as List<dynamic>)
+            .map((e) => (e as List<dynamic>).map((v) => v as double).toList())
+            .toList(),
         cv.MatType.CV_32FC1,
       ),
       dist: cv.Mat.from2DList(
-        (map['dist'] as List<dynamic>).map((e) => (e as List<dynamic>).map((v) => v as double).toList()).toList(),
+        (map['dist'] as List<dynamic>)
+            .map((e) => (e as List<dynamic>).map((v) => v as double).toList())
+            .toList(),
         cv.MatType.CV_32FC1,
       ),
+      width: (map['width'] as num).toInt(),
+      height: (map['height'] as num).toInt(),
     );
   }
 
@@ -37,22 +66,26 @@ class CameraCalibrateResult {
       );
 
   @override
-  String toString() => 'CameraCalibrateResult(mtx: $mtx, dist: $dist)';
+  String toString() =>
+      'CameraCalibrateResult(mtx: $mtx, dist: $dist, width: $width, height: $height)';
 
   @override
   bool operator ==(covariant CameraCalibrateResult other) {
     if (identical(this, other)) return true;
 
-    return other.mtx == mtx && other.dist == dist;
+    return other.mtx == mtx &&
+        other.dist == dist &&
+        other.width == width &&
+        other.height == height;
   }
 
   @override
-  int get hashCode => mtx.hashCode ^ dist.hashCode;
+  int get hashCode =>
+      mtx.hashCode ^ dist.hashCode ^ width.hashCode ^ height.hashCode;
 }
 
 class ChessboardCorrector {
-  final (int, int) chessboardSize;
-  final double chessboardWidth;
+  double _chessboardWidth = 21.2;
   final imageShape = [0, 0];
 
   late final List<cv.Point3f> chessboardPointsPattern;
@@ -60,21 +93,22 @@ class ChessboardCorrector {
   final List<List<cv.Point2f>> imgPoints = [];
   int imageCount = 0;
 
-  ChessboardCorrector({
-    this.chessboardSize = (6, 8),
-    this.chessboardWidth = 21.2,
-  }) {
+  ChessboardCorrector() {
     final int cols = chessboardSize.$1;
     final int rows = chessboardSize.$2;
     chessboardPointsPattern = List.generate(
       rows * cols,
       (i) => cv.Point3f(
-        i % cols * chessboardWidth,
-        i ~/ cols * chessboardWidth,
+        i % cols * _chessboardWidth,
+        i ~/ cols * _chessboardWidth,
         0,
       ),
     );
     imageCount = 0;
+  }
+
+  void setChessboardWidth(double width) {
+    _chessboardWidth = width;
   }
 
   void reset() {
@@ -128,6 +162,11 @@ class ChessboardCorrector {
     I/flutter (13174): [[23986.993097847037, 0.0, 1196.1959426228962], [0.0, 34772.885849378195, 2237.3877000093426], [0.0, 0.0, 1.0]]
     I/flutter (13174): [[268.48509756963483, -113938.15849769469, 1.4271931656953916, 0.2591205954191337, -33362.20367735409]]
     */
-    return CameraCalibrateResult(mtx: result.$2, dist: result.$3);
+    return CameraCalibrateResult(
+      mtx: result.$2,
+      dist: result.$3,
+      width: imageShape[0],
+      height: imageShape[1],
+    );
   }
 }

@@ -15,14 +15,14 @@ dependencies:
   onnxruntime: ^1.4.1
   get: ^4.7.2
   shared_preferences: ^2.5.3
+  flutter_cube:
+    path: extra/flutter_cube
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_cube:
-    path: extra/flutter_cube
 
 dependency_overrides:
   camera_android: ^0.10.10+5

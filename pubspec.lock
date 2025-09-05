@@ -135,7 +135,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_cube:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       path: "extra/flutter_cube"
       relative: true

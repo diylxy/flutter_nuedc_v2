@@ -8,8 +8,8 @@ import 'package:flutter_nuedc_v2/view/page/two_d_page.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class Routes {
-  static const splash = '/';
-  static const main = '/main';
+  static const splash = '/splash';
+  static const main = '/';
   static const twod = '/twod';
   static const threed = '/threed';
   static const settings = '/settings';

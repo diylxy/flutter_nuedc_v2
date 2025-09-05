@@ -52,6 +52,16 @@ extension CameraToCVExtension on CameraImage {
     return mat;
   }
 
+  Future<cv.Mat> _yuv420pToGray(CameraImage image) async {
+    cv.Mat mat = cv.Mat.fromList(
+      image.height,
+      image.width,
+      cv.MatType.CV_8UC1,
+      yuv420ToGrayBuffer(image),
+    );
+    return mat;
+  }
+
   static const _orientations = {
     DeviceOrientation.portraitUp: 0,
     DeviceOrientation.landscapeLeft: 90,
@@ -65,6 +75,38 @@ extension CameraToCVExtension on CameraImage {
 
     cv.Mat mat = switch (format) {
       InputImageFormat.yuv_420_888 => await _yuv420pToBGR(this),
+      _ => throw UnimplementedError(),
+    };
+
+    final sensorOrientation = controller?.description.sensorOrientation ?? 0;
+    var rotationCompensation =
+        _orientations[controller?.value.deviceOrientation] ?? 0;
+    if (controller?.description.lensDirection == CameraLensDirection.front) {
+      // front-facing
+      rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
+    } else {
+      // back-facing
+      rotationCompensation =
+          (sensorOrientation - rotationCompensation + 360) % 360;
+    }
+    switch (rotationCompensation) {
+      case 90:
+        await cv.rotateAsync(mat, cv.ROTATE_90_CLOCKWISE, dst: mat);
+      case 180:
+        await cv.rotateAsync(mat, cv.ROTATE_180, dst: mat);
+      case 270:
+        await cv.rotateAsync(mat, cv.ROTATE_90_COUNTERCLOCKWISE, dst: mat);
+      default:
+    }
+    return mat;
+  }
+
+  Future<cv.Mat> toCVGray({CameraController? controller}) async {
+    final format = InputImageFormatValue.fromRawValue(this.format.raw);
+    assert(format != null);
+
+    cv.Mat mat = switch (format) {
+      InputImageFormat.yuv_420_888 => await _yuv420pToGray(this),
       _ => throw UnimplementedError(),
     };
 
@@ -153,7 +195,8 @@ Uint8List yuv420ToBGR888(CameraImage image) {
 
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
-      final int uvIndex = uvPixelStride * (x / 2).floor() + uvRowStride * (y / 2).floor();
+      final int uvIndex =
+          uvPixelStride * (x / 2).floor() + uvRowStride * (y / 2).floor();
       final int index = y * width + x;
 
       final yValue = yBuffer[y * yRowStride + x * yPixelStride];
@@ -161,7 +204,8 @@ Uint8List yuv420ToBGR888(CameraImage image) {
       final vValue = vBuffer[uvIndex];
 
       final r = (yValue + 1.402 * (vValue - 128)).round();
-      final g = (yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128)).round();
+      final g = (yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128))
+          .round();
       final b = (yValue + 1.772 * (uValue - 128)).round();
 
       rgbaBuffer[index * 3 + 0] = b.clamp(0, 255);
@@ -170,6 +214,28 @@ Uint8List yuv420ToBGR888(CameraImage image) {
     }
   }
   return rgbaBuffer;
+}
+
+Uint8List yuv420ToGrayBuffer(CameraImage image) {
+  final int width = image.width;
+  final int height = image.height;
+
+  final int yRowStride = image.planes[0].bytesPerRow;
+  final int yPixelStride = image.planes[0].bytesPerPixel!;
+
+  final yBuffer = image.planes[0].bytes;
+
+  final compactBuffer = Uint8List(width * height);
+
+  int yIndex = 0;
+  for (int y = 0; y < height; y++) {
+    final int yOffset = y * yRowStride;
+    for (int x = 0; x < width; x++) {
+      compactBuffer[yIndex++] = yBuffer[yOffset + x * yPixelStride];
+    }
+  }
+
+  return compactBuffer;
 }
 
 Uint8List yuv420ToCompactBuffer(CameraImage image) {

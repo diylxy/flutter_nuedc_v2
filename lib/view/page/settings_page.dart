@@ -46,6 +46,61 @@ class SettingsPage extends StatelessWidget {
                       () => _cameraTogglesRowWidget(CameraManager.to.cameras),
                     ),
                   ),
+                  // 棋盘格宽度
+                  ListTile(
+                    leading: Icon(Icons.grid_view),
+                    title: const Text('棋盘格间距', style: TextStyle(fontSize: 20)),
+                    subtitle: Obx(
+                      () => Text(
+                        '设置的间距: ${MainPageController.to.chessboardWidth} mm',
+                      ),
+                    ),
+                    onTap: () {
+                      showDialog<double>(
+                        context: context,
+                        builder: (context) {
+                          double value = MainPageController.to.chessboardWidth
+                              .toDouble();
+                          return StatefulBuilder(
+                            builder: (context, setState) {
+                              return AlertDialog(
+                                title: const Text('设置棋盘格间距'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('${value.toStringAsFixed(1)} mm'),
+                                    Slider(
+                                      value: value,
+                                      min: 15.0,
+                                      max: 30.0,
+                                      label: value.toStringAsFixed(1),
+                                      onChanged: (v) =>
+                                          setState(() => value = v),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(),
+                                    child: const Text('取消'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      MainPageController.to.chessboardWidth =
+                                          value;
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
                   // 棋盘格标定
                   ListTile(
                     titleAlignment: ListTileTitleAlignment.titleHeight,
@@ -130,7 +185,7 @@ class SettingsPage extends StatelessWidget {
                                         Python.worldOriginCalib(value);
                                         Navigator.of(context).pop();
                                       },
-                                      child: const Text('拍摄棋盘格'),
+                                      child: const Text('拍摄目标物'),
                                     ),
                                   ],
                                 );
@@ -140,7 +195,7 @@ class SettingsPage extends StatelessWidget {
                         );
                       },
                       style: buttonStyle,
-                      child: const Text('拍摄棋盘格'),
+                      child: const Text('拍摄目标物'),
                     ),
                   ),
                   // 线性误差标定
@@ -274,6 +329,68 @@ class SettingsPage extends StatelessWidget {
                           !MainPageController.to.focusMode;
                     },
                   ),
+                  // 黑白调参模式
+                  ListTile(
+                    leading: Icon(Icons.pest_control_sharp),
+                    title: const Text('黑白调参模式', style: TextStyle(fontSize: 20)),
+                    trailing: Obx(
+                      () => Switch(
+                        value: MainPageController.to.bwMode,
+                        onChanged: (value) =>
+                            MainPageController.to.bwMode = value,
+                      ),
+                    ),
+                    onTap: () {
+                      MainPageController.to.bwMode =
+                          !MainPageController.to.bwMode;
+                    },
+                  ),
+                  // 黑白阈值
+                  ListTile(
+                    titleAlignment: ListTileTitleAlignment.titleHeight,
+                    leading: Icon(Icons.contrast),
+                    title: const Text('黑白阈值', style: TextStyle(fontSize: 20)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Obx(
+                          () => Text(
+                            '边框阈值: ${MainPageController.to.bwThresholdPaper.toInt()}',
+                          ),
+                        ),
+                        Obx(
+                          () => Text(
+                            '测量阈值: ${MainPageController.to.bwThresholdRect.toInt()}',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Obx(
+                          () => Slider(
+                            min: 0,
+                            max: 255,
+                            value: MainPageController.to.bwThresholdPaper,
+                            onChanged: (v) =>
+                                MainPageController.to.bwThresholdPaper = v,
+                            label: MainPageController.to.bwThresholdPaper
+                                .toInt()
+                                .toString(),
+                          ),
+                        ),
+                        Obx(
+                          () => Slider(
+                            min: 0,
+                            max: 255,
+                            value: MainPageController.to.bwThresholdRect,
+                            onChanged: (v) =>
+                                MainPageController.to.bwThresholdRect = v,
+                            label: MainPageController.to.bwThresholdRect
+                                .toInt()
+                                .toString(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   // Canny调参模式
                   ListTile(
                     leading: Icon(Icons.border_outer),
@@ -293,12 +410,12 @@ class SettingsPage extends StatelessWidget {
                           !MainPageController.to.cannyMode;
                     },
                   ),
-                  // 黑白阈值
+                  // Canny阈值
                   ListTile(
                     titleAlignment: ListTileTitleAlignment.titleHeight,
-                    leading: Icon(Icons.contrast),
+                    leading: Icon(Icons.grid_on_sharp),
                     title: const Text(
-                      '黑白阈值',
+                      'Canny阈值',
                       style: TextStyle(fontSize: 20),
                     ),
                     subtitle: Column(
@@ -306,19 +423,19 @@ class SettingsPage extends StatelessWidget {
                       children: [
                         Obx(
                           () => Text(
-                            '边框阈值: ${MainPageController.to.cannyLow.toInt()}',
+                            '低阈值: ${MainPageController.to.cannyLow.toInt()}',
                           ),
                         ),
                         Obx(
                           () => Text(
-                            '测量阈值: ${MainPageController.to.cannyHigh.toInt()}',
+                            '高阈值: ${MainPageController.to.cannyHigh.toInt()}',
                           ),
                         ),
                         const SizedBox(height: 8),
                         Obx(
                           () => Slider(
-                            min: 0,
-                            max: 255,
+                            min: 50,
+                            max: 500,
                             value: MainPageController.to.cannyLow,
                             onChanged: (v) =>
                                 MainPageController.to.cannyLow = v,
@@ -329,8 +446,8 @@ class SettingsPage extends StatelessWidget {
                         ),
                         Obx(
                           () => Slider(
-                            min: 0,
-                            max: 255,
+                            min: 50,
+                            max: 600,
                             value: MainPageController.to.cannyHigh,
                             onChanged: (v) =>
                                 MainPageController.to.cannyHigh = v,
@@ -341,38 +458,6 @@ class SettingsPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-                  // 高精度数字识别
-                  ListTile(
-                    leading: Icon(Icons.onetwothree),
-                    title: const Text(
-                      '高精度数字识别',
-                      style: TextStyle(fontSize: 20),
-                    ),
-                    subtitle: Text('基于Hu/CNN融合算法，可能提高功耗'),
-                    trailing: Obx(
-                      () => Switch(
-                        value: MainPageController.to.numberRecMode,
-                        onChanged: (value) =>
-                            MainPageController.to.numberRecMode = value,
-                      ),
-                    ),
-                    onTap: () {
-                      MainPageController.to.numberRecMode =
-                          !MainPageController.to.numberRecMode;
-                    },
-                  ),
-                  // 清除缓存
-                  ListTile(
-                    leading: Icon(Icons.delete),
-                    title: const Text(
-                      '清除缓存',
-                      style: TextStyle(fontSize: 20),
-                    ),
-                    subtitle: Text('清除照片缓存'),
-                    onTap: () {
-                      Python.doClearCache();
-                    },
                   ),
                   Divider(),
                   Row(
@@ -408,34 +493,6 @@ class SettingsPage extends StatelessWidget {
                     subtitle: Text('从dataMaps.pkl读取标定结果\n将覆盖当前全部状态，请再次确认'),
                     onTap: () {
                       Python.loadResult();
-                    },
-                  ),
-                  // 恢复出厂设置
-                  ListTile(
-                    tileColor: Color.lerp(Colors.red, Colors.black, 0.6),
-                    leading: Icon(Icons.restore),
-                    title: const Text(
-                      '恢复出厂设置',
-                      style: TextStyle(fontSize: 20, color: Colors.red),
-                    ),
-                    subtitle: Text(
-                      '读取dataMapsFactory.pkl实验室标定结果\n（本操作不会修改任何文件）',
-                    ),
-                    onTap: () {
-                      Python.loadFactoryResult();
-                    },
-                  ),
-                  // 重启
-                  ListTile(
-                    tileColor: Color.lerp(Colors.red, Colors.black, 0.6),
-                    leading: Icon(Icons.refresh),
-                    title: const Text(
-                      '重启',
-                      style: TextStyle(fontSize: 20, color: Colors.red),
-                    ),
-                    subtitle: Text('重启操作系统'),
-                    onTap: () {
-                      Python.reboot();
                     },
                   ),
                   // END
@@ -575,6 +632,7 @@ class SettingsPage extends StatelessWidget {
         return Icons.camera;
     }
   }
+
   /// Returns a suitable camera icon for [direction].
   String _getCameraLensName(CameraLensDirection direction) {
     switch (direction) {
@@ -595,12 +653,14 @@ class SettingsPage extends StatelessWidget {
       return const Text('None');
     } else {
       return Row(
-        children: [TextButton.icon(
-              onPressed: () {CameraManager.to.stop();
-              },
-              icon: Icon(Icons.no_photography),
-              label: Text("关闭"),
-            ),
+        children: [
+          TextButton.icon(
+            onPressed: () {
+              CameraManager.to.stop();
+            },
+            icon: Icon(Icons.no_photography),
+            label: Text("关闭"),
+          ),
           ...List.generate(
             cameras.length,
             (index) => TextButton.icon(

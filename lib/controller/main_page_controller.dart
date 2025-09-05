@@ -1,4 +1,6 @@
+import 'package:flutter_nuedc_v2/controller/camera_manager.dart';
 import 'package:flutter_nuedc_v2/python_wrapper.dart';
+import 'package:flutter_nuedc_v2/utils/user_preference.dart';
 import 'package:get/get.dart';
 import 'dart:math';
 
@@ -93,6 +95,13 @@ class MainPageController extends GetxController {
     Python.realtimeMeasuremode(enable);
   }
 
+  final _bwMode = false.obs;
+  bool get bwMode => _bwMode.value;
+  set bwMode(bool enable) {
+    _bwMode.value = enable;
+    Python.bwMode(enable);
+  }
+
   final _cannyMode = false.obs;
   bool get cannyMode => _cannyMode.value;
   set cannyMode(bool enable) {
@@ -100,20 +109,40 @@ class MainPageController extends GetxController {
     Python.cannyMode(enable);
   }
 
-  final _cannyLow = 60.0.obs;
+  final _cannyLow = 200.0.obs;
   double get cannyLow => _cannyLow.value;
   set cannyLow(double value) {
     _cannyLow.value = value;
-    Python.cannyParam1(value.toInt());
+    Python.cannyParamLow(value.toInt());
   }
 
-  final _cannyHigh = 127.0.obs;
+  final _cannyHigh = 500.0.obs;
   double get cannyHigh => _cannyHigh.value;
   set cannyHigh(double value) {
     _cannyHigh.value = value;
-    Python.cannyParam2(value.toInt());
+    Python.cannyParamHigh(value.toInt());
   }
 
+  final _bwThresholdPaper = 60.0.obs;
+  double get bwThresholdPaper => _bwThresholdPaper.value;
+  set bwThresholdPaper(double value) {
+    _bwThresholdPaper.value = value;
+    Python.bwParam1(value.toInt());
+  }
+
+  final _bwThresholdRect = 127.0.obs;
+  double get bwThresholdRect => _bwThresholdRect.value;
+  set bwThresholdRect(double value) {
+    _bwThresholdRect.value = value;
+    Python.bwParam2(value.toInt());
+  }
+  final _chessboardWidth = 21.2.obs;
+  double get chessboardWidth => _chessboardWidth.value;
+  set chessboardWidth(double value) {
+    _chessboardWidth.value = value;
+    UserPreferenceService.to.chessboardWidth = value;
+    CameraManager.to.corrector.setChessboardWidth(chessboardWidth);
+  }
   final _focusMode = false.obs;
   bool get focusMode => _focusMode.value;
   set focusMode(bool enable) {
@@ -158,7 +187,6 @@ class MainPageController extends GetxController {
       });
     } else {
       loading.value = false;
-      currentRectID = -1;
     }
   }
 

@@ -308,43 +308,107 @@ class Python {
   // 不支持
   static Future<void> enterExitLowpower(bool enter) async {}
 
-  // 不支持
-  static Future<void> realtimeMeasuremode(bool enable) async {
-    if (enable) {
-      await CameraManager.to.reinitialize(lowQuality: true);
-      await CameraManager.to.setImageStreamCB(_streamCB3D);
+  // Canny调参模式
+  static void _streamCBCanny(CameraImage image) async {
+    final frame = await image.toCVGray(
+      controller: CameraManager.to.cameraController,
+    );
+    await cv.cannyAsync(
+      frame,
+      UserPreferenceService.to.cannyLow.toDouble(),
+      UserPreferenceService.to.cannyHigh.toDouble(),
+      apertureSize: 3,
+      edges: frame,
+    );
+    CameraManager.to.opencvPreviewImage = await frame.toUiImage();
+  }
+
+  // 黑白调参模式
+  static void _streamCBBW(CameraImage image) async {
+    final frame = await image.toCVGray(
+      controller: CameraManager.to.cameraController,
+    );
+    await cv.thresholdAsync(
+      frame,
+      UserPreferenceService.to.bwThresholdPaper.toDouble(),
+      255,
+      cv.THRESH_BINARY,
+      dst: frame,
+    );
+    CameraManager.to.opencvPreviewImage = await frame.toUiImage();
+  }
+
+  static void _streamCBRealtime(CameraImage image) async {
+    final frame = await image.toCVGray(
+      controller: CameraManager.to.cameraController,
+    );
+    CameraCalibrateResult calibDataDummy = CameraCalibrateResult(
+      mtx: cv.Mat.from2DList([
+        [800.0, 0.0, frame.width / 2],
+        [0.0, 800.0, frame.height / 2],
+        [0.0, 0.0, 1.0],
+      ], cv.MatType.CV_64FC1),
+      dist: cv.Mat.zeros(1, 5, cv.MatType.CV_64FC1),
+      width: frame.width,
+      height: frame.height,
+    );
+    final clipResult = await paperFinder.clipPaper(
+      frame,
+      calibDataDummy,
+      cannyLow: UserPreferenceService.to.cannyLow,
+      cannyHigh: UserPreferenceService.to.cannyHigh,
+      bwThresh: UserPreferenceService.to.bwThresholdPaper,
+      weak: true,
+    );
+    if (clipResult != null) {
+      CameraManager.to.opencvPreviewImage = await clipResult.clipped
+          .toUiImage();
     } else {
-      await CameraManager.to.reinitialize(lowQuality: false);
-      await CameraManager.to.setImageStreamCB(null);
+      CameraManager.to.opencvPreviewImage = await frame.toUiImage();
     }
   }
 
-  // 不支持
-  static Future<void> cannyMode(bool enable) async {}
-
-  // 实际为设置边框阈值
-  static Future<void> cannyParam1(int param) async {
-    if (param < 0) param = 0;
-    if (param > 255) param = 255;
-    UserPreferenceService.to.bwThresholdPaper = param;
-  }
-
-  // 实际为设置测量阈值
-  static Future<void> cannyParam2(int param) async {
-    if (param < 0) param = 0;
-    if (param > 255) param = 255;
-    UserPreferenceService.to.bwThresholdRect = param;
-  }
-
-  static Future<void> setCurrentRectID(int id) async {
-    targetNumber = id;
-  }
-
   static void _streamCB3D(CameraImage image) async {
-    final frame = await image.toCV(
+    final frame = await image.toCVGray(
       controller: CameraManager.to.cameraController,
     );
-    CameraManager.to.opencvPreviewImage = await frame.toUiImage();
+    double f = 800.0;
+    if (UserPreferenceService.to.calibData != null) {
+      f =
+          UserPreferenceService.to.calibData!.mtx.at<double>(0, 0) *
+          (frame.height / UserPreferenceService.to.calibData!.height);
+    }
+    final cx = frame.width / 2;
+    final cy = frame.height / 2;
+    CameraCalibrateResult calibDataDummy = CameraCalibrateResult(
+      mtx: cv.Mat.from2DList([
+        [f, 0.0, cx],
+        [0.0, f, cy],
+        [0.0, 0.0, 1.0],
+      ], cv.MatType.CV_64FC1),
+      dist: cv.Mat.zeros(1, 5, cv.MatType.CV_64FC1),
+      width: frame.width,
+      height: frame.height,
+    );
+    final clipResult = await paperFinder.clipPaper(
+      frame,
+      calibDataDummy,
+      cannyLow: UserPreferenceService.to.cannyLow,
+      cannyHigh: UserPreferenceService.to.cannyHigh,
+      bwThresh: UserPreferenceService.to.bwThresholdPaper,
+      weak: true,
+    );
+    if (clipResult != null) {
+      CoordinateDesc coord = clipResult.coord;
+      if (UserPreferenceService.to.coordBase != null) {
+        coord = coord.of(UserPreferenceService.to.coordBase!);
+      }
+      Local.update3D(
+        coord.R.toList(),
+        coord.rvec.toList(),
+        coord.tvec.toList(),
+      );
+    }
   }
 
   static Future<void> enter3D() async {
@@ -355,6 +419,62 @@ class Python {
   static Future<void> leave3D() async {
     await CameraManager.to.reinitialize(lowQuality: false);
     await CameraManager.to.setImageStreamCB(null);
+  }
+
+  static Future<void> realtimeMeasuremode(bool enable) async {
+    if (enable) {
+      await CameraManager.to.reinitialize(lowQuality: true);
+      await CameraManager.to.setImageStreamCB(_streamCBRealtime);
+    } else {
+      await CameraManager.to.reinitialize(lowQuality: false);
+      await CameraManager.to.setImageStreamCB(null);
+    }
+  }
+
+  static Future<void> bwMode(bool enable) async {
+    if (enable) {
+      await CameraManager.to.reinitialize(lowQuality: true);
+      await CameraManager.to.setImageStreamCB(_streamCBBW);
+    } else {
+      await CameraManager.to.reinitialize(lowQuality: false);
+      await CameraManager.to.setImageStreamCB(null);
+    }
+  }
+
+  static Future<void> cannyMode(bool enable) async {
+    if (enable) {
+      await CameraManager.to.reinitialize(lowQuality: true);
+      await CameraManager.to.setImageStreamCB(_streamCBCanny);
+    } else {
+      await CameraManager.to.reinitialize(lowQuality: false);
+      await CameraManager.to.setImageStreamCB(null);
+    }
+  }
+
+  // 设置边框阈值
+  static Future<void> bwParam1(int param) async {
+    if (param < 0) param = 0;
+    if (param > 255) param = 255;
+    UserPreferenceService.to.bwThresholdPaper = param;
+  }
+
+  // 设置测量阈值
+  static Future<void> bwParam2(int param) async {
+    if (param < 0) param = 0;
+    if (param > 255) param = 255;
+    UserPreferenceService.to.bwThresholdRect = param;
+  }
+
+  static Future<void> cannyParamHigh(int param) async {
+    UserPreferenceService.to.cannyHigh = param;
+  }
+
+  static Future<void> cannyParamLow(int param) async {
+    UserPreferenceService.to.cannyLow = param;
+  }
+
+  static Future<void> setCurrentRectID(int id) async {
+    targetNumber = id;
   }
 
   static Future<void> oneshotMeasurement() async {
