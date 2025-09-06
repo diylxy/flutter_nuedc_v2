@@ -150,9 +150,6 @@ class Python {
     D += coord.getDistanceZ();
     if (useLinearCalibrator) {
       D = UserPreferenceService.to.linearErrorCalibrator.correct(D);
-      D += UserPreferenceService.to.circularErrorCalibrator.correct(
-        coord.getYAngleDegree(),
-      );
     }
     return (D, coord);
   }

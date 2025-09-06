@@ -8,17 +8,11 @@ import 'package:opencv_core/opencv.dart' as cv;
 class ClipPaperResult {
   final cv.Mat clipped;
   final CoordinateDesc coord;
-  final List<cv.Mat> dists;
 
-  ClipPaperResult({
-    required this.clipped,
-    required this.coord,
-    required this.dists,
-  });
+  ClipPaperResult({required this.clipped, required this.coord});
 }
 
 class PaperFinder {
-
   Future<cv.VecPoint2f> _getEdgeCorners(
     cv.Mat gray,
     cv.Mat edged, {
@@ -103,11 +97,11 @@ class PaperFinder {
               .toList(),
         );
         // if (weak == false) {
-          cv.cornerSubPix(gray, corners, const (5, 5), const (-1, -1), (
-            cv.TERM_MAX_ITER + cv.TERM_EPS,
-            30,
-            0.001,
-          ));
+        cv.cornerSubPix(gray, corners, const (5, 5), const (-1, -1), (
+          cv.TERM_MAX_ITER + cv.TERM_EPS,
+          30,
+          0.001,
+        ));
         // }
         final area = cv.contourArea(inner);
         if (area > maxArea) {
@@ -129,17 +123,17 @@ class PaperFinder {
     return maxAreaRect;
   }
 
-  Future<(CoordinateDesc, List<cv.Mat>)> _getDists(
+  Future<CoordinateDesc> _getDists(
     cv.VecPoint2f innerCorners,
     cv.Mat mtx,
     cv.Mat dist,
   ) async {
     final cv.VecPoint2f sortedPoints = EasyTrans.orderPointsRect(innerCorners);
     final cv.Mat realPts = cv.Mat.from2DList([
-      [0.0, 0.0, 0.0],
-      [paperWidth.toDouble(), 0.0, 0.0],
-      [paperWidth.toDouble(), paperHeight.toDouble(), 0.0],
-      [0.0, paperHeight.toDouble(), 0.0],
+      [-paperWidth / 2, -paperHeight.toDouble(), 0.0],
+      [paperWidth / 2, -paperHeight.toDouble(), 0.0],
+      [paperWidth / 2, 0.0, 0.0],
+      [-paperWidth / 2, 0.0, 0.0],
     ], cv.MatType.CV_32FC1);
     // 求解旋转和平移向量
     final solvePnPResult = cv.solvePnP(
@@ -157,22 +151,7 @@ class PaperFinder {
     // 计算旋转矩阵
     final R = cv.Rodrigues(rvec);
 
-    // 计算4条边的中点三维坐标和距离
-    final List<cv.Mat> dists = [];
-    for (int edgeIdx = 0; edgeIdx < 4; edgeIdx++) {
-      final pt1 = realPts.row(edgeIdx);
-      final pt2 = realPts.row((edgeIdx + 1) % 4);
-      // 物体坐标系下的中点
-      final midpointObj = (pt1.addMat(
-        pt2,
-      )).divideF32(2.0).convertTo(cv.MatType.CV_64FC1);
-
-      // 将中点从物体坐标系变换到相机坐标系
-      final midpointObjReshaped = midpointObj.reshape(1, 3); // shape (3, 1)
-      final midpointCam = cv.gemm(R, midpointObjReshaped, 1.0, tvec, 1.0);
-      dists.add(midpointCam);
-    }
-    return (CoordinateDesc(R: R, rvec: rvec, tvec: tvec), dists);
+    return CoordinateDesc(R: R, rvec: rvec, tvec: tvec);
   }
 
   Future<ClipPaperResult?> clipPaper(
@@ -186,7 +165,7 @@ class PaperFinder {
   }) async {
     cv.Mat bw = cv.Mat.empty();
     if (weak) {
-      bw = await cv.cannyAsync(gray, 200, 500);
+      bw = await cv.cannyAsync(gray, cannyLow.toDouble(), cannyHigh.toDouble());
     } else {
       (_, bw) = await cv.thresholdAsync(
         gray,
@@ -216,12 +195,7 @@ class PaperFinder {
         height: paperHeight * paperScaleFactor,
         expand: 0,
       );
-
-      return ClipPaperResult(
-        clipped: clipped,
-        coord: result.$1,
-        dists: result.$2,
-      );
+      return ClipPaperResult(clipped: clipped, coord: result);
     }
     return null;
   }

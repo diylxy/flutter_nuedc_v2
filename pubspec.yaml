@@ -40,4 +40,3 @@ hooks:
       include_modules:
         - imgcodecs
         - imgproc
-        - videoio

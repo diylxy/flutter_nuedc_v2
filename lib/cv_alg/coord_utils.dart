@@ -2,7 +2,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter_nuedc_v2/cv_alg/constants.dart';
 import 'package:opencv_core/opencv.dart' as cv;
 
 class CoordinateDesc {
@@ -12,33 +11,22 @@ class CoordinateDesc {
   CoordinateDesc({required this.rvec, required this.tvec, required this.R});
 
   CoordinateDesc of(CoordinateDesc coordBase) {
-    // Calculate the rotation matrix of coord in coordBase's coordinate system
-    cv.Mat newR = coordBase.R.t().multiplyMat(R);
+    cv.Mat mRRel = coordBase.R.t().multiplyMat(R);  // 相对旋转
 
-    // Calculate the translation vector of coord in coordBase's coordinate system
-    cv.Mat newTvec = coordBase.R.t().multiplyMat(tvec.subtract(coordBase.tvec));
+    // 物体2到物体1的相对位移
+    cv.Mat mtRel = tvec.subtract(coordBase.tvec);   // 相机坐标系下的相对位移
 
-    // Convert the rotation matrix to a rotation vector
-    cv.Mat newRvec = cv.Rodrigues(newR);
+    // 转换回物体1坐标下
+    cv.Mat mRtRel = coordBase.R.t().multiplyMat(mtRel);
 
-    return CoordinateDesc(rvec: newRvec, tvec: newTvec, R: newR);
+    cv.Mat rvecRel = cv.Rodrigues(mRRel);
+
+    return CoordinateDesc(rvec: rvecRel, tvec: mRtRel, R: mRRel);
   }
 
   double getDistanceZ() {
-    // Define the real-world rectangle point (in mm) to calculate the Z-distance for
-    List<double> targetPt = [paperWidth.toDouble() / 2.0, paperHeight.toDouble(), 0];
-
-    // Transform the target point to the camera coordinate system
-    cv.Mat targetPtMat = cv.Mat.fromList(
-      3,
-      1,
-      cv.MatType.CV_64FC1,
-      targetPt,
-    );
-    cv.Mat targetCamMat = R.multiplyMat(targetPtMat).add(tvec);
-
     // Return the Z-distance of the target point
-    return targetCamMat.toList()[2][0].toDouble();
+    return tvec.toList()[2][0].toDouble();
   }
 
   double getYAngleDegree() {
