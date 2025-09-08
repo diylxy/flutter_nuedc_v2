@@ -241,46 +241,46 @@ class SettingsPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // 旋转误差标定
-                  ListTile(
-                    titleAlignment: ListTileTitleAlignment.titleHeight,
-                    leading: Icon(Icons.rotate_90_degrees_cw),
-                    title: const Text('旋转误差标定', style: TextStyle(fontSize: 20)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Obx(
-                          () => Text(
-                            MainPageController.to.circularErrorInfo.value,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8.0,
-                          runSpacing: 8.0,
-                          children: [
-                            FilledButton(
-                              onPressed: () {
-                                Python.circularCalibClear();
-                                MainPageController.to.circularErrorInfo.value =
-                                    '未应用';
-                              },
-                              style: buttonStyle,
-                              child: const Text('清空'),
-                            ),
-                            _circularCalibButton(context, buttonStyle),
-                            FilledButton(
-                              onPressed: () {
-                                Python.circularCalibCalculate();
-                              },
-                              style: buttonStyle,
-                              child: const Text('计算'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  // 旋转误差标定（原算法有逻辑错误，不建议使用）
+                  // ListTile(
+                  //   titleAlignment: ListTileTitleAlignment.titleHeight,
+                  //   leading: Icon(Icons.rotate_90_degrees_cw),
+                  //   title: const Text('旋转误差标定', style: TextStyle(fontSize: 20)),
+                  //   subtitle: Column(
+                  //     crossAxisAlignment: CrossAxisAlignment.start,
+                  //     children: [
+                  //       Obx(
+                  //         () => Text(
+                  //           MainPageController.to.circularErrorInfo.value,
+                  //         ),
+                  //       ),
+                  //       const SizedBox(height: 8),
+                  //       Wrap(
+                  //         spacing: 8.0,
+                  //         runSpacing: 8.0,
+                  //         children: [
+                  //           FilledButton(
+                  //             onPressed: () {
+                  //               Python.circularCalibClear();
+                  //               MainPageController.to.circularErrorInfo.value =
+                  //                   '未应用';
+                  //             },
+                  //             style: buttonStyle,
+                  //             child: const Text('清空'),
+                  //           ),
+                  //           _circularCalibButton(context, buttonStyle),
+                  //           FilledButton(
+                  //             onPressed: () {
+                  //               Python.circularCalibCalculate();
+                  //             },
+                  //             style: buttonStyle,
+                  //             child: const Text('计算'),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                   // 低功耗
                   ListTile(
                     leading: Icon(Icons.battery_saver),
