@@ -8,14 +8,14 @@ class DigitRecognizerCnn {
   bool isInited = false;
   Future<void> init() async {
     if (isInited) return;
-    isInited = true;
-    OrtEnv.instance.init();
-    final sessionOptions = OrtSessionOptions();
-    const assetFileName =
-        'assets/models/digit_cnn_gray_24x24_0-9_mixed_best_1.onnx';
-    final rawAssetFile = await rootBundle.load(assetFileName);
-    final bytes = rawAssetFile.buffer.asUint8List();
-    _session = OrtSession.fromBuffer(bytes, sessionOptions);
+    // isInited = true;
+    // OrtEnv.instance.init();
+    // final sessionOptions = OrtSessionOptions();
+    // const assetFileName =
+    //     'assets/models/digit_cnn_gray_24x24_0-9_mixed_best_1.onnx';
+    // final rawAssetFile = await rootBundle.load(assetFileName);
+    // final bytes = rawAssetFile.buffer.asUint8List();
+    // _session = OrtSession.fromBuffer(bytes, sessionOptions);
   }
 
   // mat为灰度图，24*24像素
