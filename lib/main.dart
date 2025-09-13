@@ -40,7 +40,7 @@ class MainApp extends StatelessWidget {
       ),
       navigatorKey: navigatorKey,
       routes: routes,
-      initialRoute: '/old',
+      initialRoute: '/',
     );
   }
 }
