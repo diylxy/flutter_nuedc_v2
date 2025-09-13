@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:opencv_core/opencv.dart' as cv;
 
@@ -10,23 +11,35 @@ class CoordinateDesc {
   CoordinateDesc({required this.rvec, required this.tvec, required this.R});
 
   CoordinateDesc of(CoordinateDesc coordBase) {
-    // Calculate the rotation matrix of coord in coordBase's coordinate system
-    cv.Mat newR = coordBase.R.t().multiplyMat(R);
+    cv.Mat mRRel = coordBase.R.t().multiplyMat(R);  // 相对旋转
 
-    // Calculate the translation vector of coord in coordBase's coordinate system
-    cv.Mat newTvec = coordBase.R.t().multiplyMat(tvec.subtract(coordBase.tvec));
+    // 物体2到物体1的相对位移
+    cv.Mat mtRel = tvec.subtract(coordBase.tvec);   // 相机坐标系下的相对位移
 
-    // Convert the rotation matrix to a rotation vector
-    cv.Mat newRvec = cv.Rodrigues(newR);
+    // 转换回物体1坐标下
+    cv.Mat mRtRel = coordBase.R.t().multiplyMat(mtRel);
 
-    return CoordinateDesc(rvec: newRvec, tvec: newTvec, R: newR);
+    cv.Mat rvecRel = cv.Rodrigues(mRRel);
+
+    return CoordinateDesc(rvec: rvecRel, tvec: mRtRel, R: mRRel);
   }
 
   double getDistanceZ() {
-    return tvec.toList()[0][2].toDouble();
+    // Return the Z-distance of the target point
+    return tvec.toList()[2][0].toDouble();
   }
-  
-  // boilerplate
+
+  double getYAngleDegree() {
+    double thetaY = math.atan2(R.at<double>(0, 2), R.at<double>(2, 2));
+    return thetaY * (180 / math.pi); // Convert radians to degrees
+  }
+
+  double getXAngleDegree() {
+    double thetaX = math.atan2(-R.at<double>(1, 2), R.at<double>(2, 2));
+    return thetaX * (180 / math.pi); // Convert radians to degrees
+  }
+
+  // boilerplates
   CoordinateDesc copyWith({cv.Mat? rvec, cv.Mat? tvec, cv.Mat? R}) {
     return CoordinateDesc(
       rvec: rvec ?? this.rvec,
@@ -46,14 +59,23 @@ class CoordinateDesc {
   factory CoordinateDesc.fromMap(Map<String, dynamic> map) {
     return CoordinateDesc(
       rvec: cv.Mat.from2DList(
-        map['rvec'] as List<List<double>>,
-        cv.MatType.CV_32FC1,
+        (map['rvec'] as List<dynamic>)
+            .map((e) => (e as List<dynamic>).map((v) => v as double).toList())
+            .toList(),
+        cv.MatType.CV_64FC1,
       ),
       tvec: cv.Mat.from2DList(
-        map['tvec'] as List<List<double>>,
-        cv.MatType.CV_32FC1,
+        (map['tvec'] as List<dynamic>)
+            .map((e) => (e as List<dynamic>).map((v) => v as double).toList())
+            .toList(),
+        cv.MatType.CV_64FC1,
       ),
-      R: cv.Mat.from2DList(map['R'] as List<List<double>>, cv.MatType.CV_32FC1),
+      R: cv.Mat.from2DList(
+        (map['R'] as List<dynamic>)
+            .map((e) => (e as List<dynamic>).map((v) => v as double).toList())
+            .toList(),
+        cv.MatType.CV_64FC1,
+      ),
     );
   }
 

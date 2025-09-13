@@ -19,13 +19,12 @@ class CameraManager extends GetxController {
     fetchCameras();
     recognizer.init();
   }
-  
+
   @override
   void onClose() {
     super.onClose();
     recognizer.dispose();
   }
-
 
   final Rx<ui.Image?> _opencvPreviewImage = Rx<ui.Image?>(null);
   ui.Image? get opencvPreviewImage => _opencvPreviewImage.value;
@@ -38,7 +37,7 @@ class CameraManager extends GetxController {
   ) async {
     final CameraController cameraController = CameraController(
       cameraDescription,
-      ResolutionPreset.max,
+      _lowQuality ? ResolutionPreset.medium : ResolutionPreset.max,
       enableAudio: false,
       imageFormatGroup: Platform.isAndroid
           ? ImageFormatGroup.yuv420
@@ -68,6 +67,7 @@ class CameraManager extends GetxController {
       }
     }
     _controller.value = cameraController;
+    await _startImageStream();
   }
 
   void _showCameraException(CameraException e) {
@@ -81,18 +81,54 @@ class CameraManager extends GetxController {
     if (cameraController == null || !cameraController!.value.isInitialized) {
       return;
     }
+    _stopImageStream();
     await cameraController!.pausePreview();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await cameraController!.dispose();
       _controller.value = null;
     });
+    _selectedCamera.value = -1;
+  }
+
+  bool _canStream = false;
+
+  Future<void> _stopImageStream() async {
+    if (cameraController!.value.isStreamingImages) {
+      await cameraController!.stopImageStream();
+      _canStream = false;
+    }
+  }
+
+  Future<void> _startImageStream() async {
+    _canStream = true;
+    if (_imageStreamCB != null) {
+      await cameraController!.startImageStream(_imageStreamCB!);
+    }
+  }
+
+  Function(CameraImage image)? _imageStreamCB;
+
+  Future<void> setImageStreamCB(void Function(CameraImage image)? cb) async {
+    _imageStreamCB = cb;
+    if (_canStream) {
+      if (cameraController != null) {
+        if (cameraController!.value.isStreamingImages) {
+          await cameraController!.stopImageStream();
+        }
+        if (cb != null) {
+          await cameraController!.startImageStream(cb);
+        }
+      }
+    }
   }
 
   Future<void> onNewCameraSelected(CameraDescription cameraDescription) async {
     if (cameraController != null) {
+      await _stopImageStream();
       await cameraController!.pausePreview();
       await cameraController!.setDescription(cameraDescription);
       await cameraController!.resumePreview();
+      await _startImageStream();
     } else {
       return initializeCameraController(cameraDescription);
     }
@@ -111,6 +147,15 @@ class CameraManager extends GetxController {
     if (val >= _cameras.value.length || val < 0) return;
     _selectedCamera.value = val;
     onNewCameraSelected(_cameras.value[val]);
+  }
+
+  bool _lowQuality = false;
+  Future<void> reinitialize({bool lowQuality = false}) async {
+    int currentCameraId = _selectedCamera.value;
+    _lowQuality = lowQuality;
+    await stop();
+    await Future.delayed(Duration(milliseconds: 200));
+    selectedCamera = currentCameraId;
   }
 
   Future<void> fetchCameras() async {

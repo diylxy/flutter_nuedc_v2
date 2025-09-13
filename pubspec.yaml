@@ -12,9 +12,11 @@ dependencies:
   opencv_core: ^1.4.3
   camera: ^0.11.2
   path_provider: ^2.1.5
-  ml_linalg: ^13.12.6
   onnxruntime: ^1.4.1
   get: ^4.7.2
+  shared_preferences: ^2.5.3
+  flutter_cube:
+    path: extra/flutter_cube
 
 
 dev_dependencies:
@@ -38,4 +40,3 @@ hooks:
       include_modules:
         - imgcodecs
         - imgproc
-        - videoio
